@@ -1,0 +1,56 @@
+name: InnMall Corporate deploy to production
+
+on:
+  pull_request:
+    branches: ["main"]
+    types: [closed]
+#  workflow_dispatch:
+
+
+jobs:
+  deploy:
+    if: github.event.pull_request.merged
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Install packages
+      - name: Install packages
+        run: |
+          npm install --force
+
+      # Build an optimized production build
+      - name: Project build
+        env:
+          vite_token: ${{ secrets.VITE_TOKEN }}
+          vite_yandex_map_api_key: ${{ secrets.VITE_YANDEX_MAP_API_KEY }}
+          vite_chat_id: ${{ secrets.VITE_CHAT_ID }}
+          vite_email: ${{ secrets.VITE_EMAIL }}
+          vite_phone: ${{ secrets.VITE_PHONE }}
+          vite_instagram: ${{ secrets.VITE_INSTAGRAM }}
+          vite_telegram: ${{ secrets.VITE_TELEGRAM }}
+          vite_facebook: ${{ secrets.VITE_FACEBOOK }}
+
+        run: |
+          echo "VITE_TOKEN=${{ env.vite_token }}
+          VITE_YANDEX_MAP_API_KEY=${{ env.vite_yandex_map_api_key }}
+          VITE_CHATID=${{ env.vite_chat_id }}
+          VITE_MAIL=${{ env.vite_email }}
+          VITE_PHONE=${{ env.vite_phone }}
+          VITE_INSTAGRAM=${{ env.vite_instagram }}
+          VITE_TELEGRAM=${{ env.vite_telegram }}
+          VITE_FACEBOOK=${{ env.vite_facebook }}" > .env
+          npm run build
+
+      # Deploy to server
+      - name: Deploy to Production Server DigitalOcean
+        uses: appleboy/scp-action@v0.1.4
+        with:
+            host: ${{ secrets.SSH_HOST_PROD }}
+            username: ${{ secrets.SSH_USER }}
+            key: ${{ secrets.SSH_PRIVATE_KEY_PROD }}
+            source: "dist/"
+            target: "/var/www/innmall-corporate/"
+            strip_components: 1
